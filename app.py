@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 from slack_bolt import App
 from slack_bolt.adapter.flask import SlackRequestHandler
-from flask import Flask, request
+from flask import Flask, request, jsonify
 
 from automation import run_browser
 
@@ -26,6 +26,12 @@ def home():
 
 @app.route("/slack/events", methods=["POST"])
 def slack_events():
+    data = request.json
+
+    # ✅ Handle Slack URL verification
+    if data and data.get("type") == "url_verification":
+        return jsonify({"challenge": data["challenge"]})
+
     return handler.handle(request)
 
 
