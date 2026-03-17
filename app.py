@@ -38,23 +38,23 @@ def home():
 
 @flask_app.route("/slack/events", methods=["POST"])
 def slack_events():
-    logger.info("📩 Received POST request at /slack/events")
-    logger.info(f"HEADERS: {request.headers}")
+    print("🔥🔥🔥 SLACK HIT RECEIVED 🔥🔥🔥")
 
     data = request.json
-    logger.info(f"BODY: {data}")
+    print("📩 RAW BODY:", data)
 
-    # ✅ Slack URL verification
+    # Slack verification
     if data and data.get("type") == "url_verification":
+        print("✅ URL VERIFICATION")
         return jsonify({"challenge": data["challenge"]})
 
     try:
         response = handler.handle(request)
-        logger.info(f"✅ Handler executed successfully")
+        print("✅ HANDLER CALLED")
         return response
     except Exception as e:
-        logger.error(f"❌ Error handling Slack event: {str(e)}")
-        return "Internal Server Error", 500
+        print("❌ ERROR:", str(e))
+        return "error", 500
 
 
 # ==============================
