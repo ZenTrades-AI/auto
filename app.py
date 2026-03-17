@@ -5,6 +5,10 @@ from dotenv import load_dotenv
 from slack_bolt import App
 from slack_bolt.adapter.flask import SlackRequestHandler
 from flask import Flask, request, jsonify
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 from automation import run_browser
 
@@ -26,13 +30,22 @@ def home():
 
 @app.route("/slack/events", methods=["POST"])
 def slack_events():
+    logger.info("📩 Received POST request at /slack/events")
+    logger.info(f"HEADERS: {request.headers}")
     data = request.json
+    logger.info(f"BODY: {data}")
 
     # ✅ Handle Slack URL verification
     if data and data.get("type") == "url_verification":
         return jsonify({"challenge": data["challenge"]})
 
-    return handler.handle(request)
+    try:
+        response = handler.handle(request)
+        logger.info(f"✅ Handler executed successfully. Response info: {response}")
+        return response
+    except Exception as e:
+        logger.error(f"❌ Error handling Slack event: {str(e)}")
+        return "Internal Server Error", 500
 
 
 # ✅ FINAL ROBUST PARSER
