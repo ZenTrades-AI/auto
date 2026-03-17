@@ -2,3 +2,4 @@ Flask
 slack_bolt
 python-dotenv
 playwright
+gunicorn
