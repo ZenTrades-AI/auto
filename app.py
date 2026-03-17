@@ -10,21 +10,21 @@ from automation import run_browser
 
 load_dotenv()
 
-app = App(
+bolt_app = App(
     token=os.getenv("SLACK_BOT_TOKEN"),
     signing_secret=os.getenv("SLACK_SIGNING_SECRET")
 )
 
-flask_app = Flask(__name__)
-handler = SlackRequestHandler(app)
+app = Flask(__name__)
+handler = SlackRequestHandler(bolt_app)
 
 
-@flask_app.route("/", methods=["GET"])
+@app.route("/", methods=["GET"])
 def home():
     return "✅ Server is running", 200
 
 
-@flask_app.route("/slack/events", methods=["POST"])
+@app.route("/slack/events", methods=["POST"])
 def slack_events():
     data = request.json
 
@@ -66,7 +66,7 @@ def parse_message(text):
     return data
 
 
-@app.event("message")
+@bolt_app.event("message")
 def handle_message_events(body, logger):
     print("\n🔥 EVENT RECEIVED 🔥")
     print(body)
@@ -92,4 +92,4 @@ def handle_message_events(body, logger):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
-    flask_app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port)
