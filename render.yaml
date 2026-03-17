@@ -3,7 +3,7 @@ services:
     name: slack-bolt-app
     env: python
     buildCommand: "./build.sh"
-    startCommand: "gunicorn app:flask_app"
+    startCommand: "gunicorn app:app --bind 0.0.0.0:$PORT"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
