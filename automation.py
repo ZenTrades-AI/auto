@@ -1,6 +1,4 @@
 import os
-# Force Playwright to strictly download into the direct project workspace to avoid Render's virtualenv purge!
-os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/opt/render/project/src/.playwright"
 
 from playwright.sync_api import sync_playwright
 from dotenv import load_dotenv
@@ -9,7 +7,11 @@ load_dotenv()
 
 
 def run_browser(data):
-    print("🔥 run_browser STARTED")
+    print("🔥 run_browser STARTED", flush=True)
+
+    # DYNAMIC FETCH: Completely mitigates Render deleting binaries between Build/Run phases.
+    print("🛠 Ensuring Chromium is natively installed on the live runner...", flush=True)
+    os.system("playwright install chromium")
 
     try:
         with sync_playwright() as p:
