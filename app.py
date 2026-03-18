@@ -7,8 +7,6 @@ import threading
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-from automation import run_browser
-
 load_dotenv()
 
 # We call it both app and flask_app so Gunicorn won't break
@@ -113,6 +111,9 @@ def home():
 def run_automation():
     data = request.json
     logger.info(f"📩 Received UI manual trigger with data: {data}")
+    
+    # Import inside function to prevent Playwright global thread deadlock in Gunicorn!
+    from automation import run_browser
     
     # Run browser in a separate thread so it doesn't block the UI response
     thread = threading.Thread(target=run_browser, args=(data,))
