@@ -43,8 +43,8 @@ def run_browser(data):
             page.wait_for_timeout(5000)
 
             with page.expect_popup() as popup_info:
-                # Click the entire parent button wrapper explicitly using the text to perfectly ensure we actually hit the real event listener layer
-                page.locator('div[role="button"]:has-text("Sign in with Google")').first.click()
+                # Locate the main parent class wrapper, then dispatch a completely native Javascript click event within Chrome itself!
+                page.locator(".nsm7Bb-HzV7m-LgbsSe").first.evaluate("button => button.click()")
 
             popup = popup_info.value
             popup.wait_for_load_state()
