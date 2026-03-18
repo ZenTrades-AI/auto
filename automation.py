@@ -16,7 +16,11 @@ def run_browser(data):
     try:
         with sync_playwright() as p:
             # ✅ HEADLESS MODE (for server)
-            browser = p.chromium.launch(headless=True)
+            # CRITICAL: Added args for Render's constrained architecture
+            browser = p.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-dev-shm-usage"]
+            )
             # Add explicit viewport size to prevent mobile-layout/colliding elements in headless
             page = browser.new_page(viewport={"width": 1920, "height": 1080})
 
