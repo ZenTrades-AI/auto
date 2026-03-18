@@ -1,6 +1,6 @@
 import os
-# Force Playwright to look for the Chromium binary inside the project folder instead of the purged OS cache!
-os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
+# Force Playwright to strictly download into the direct project workspace to avoid Render's virtualenv purge!
+os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/opt/render/project/src/.playwright"
 
 from playwright.sync_api import sync_playwright
 from dotenv import load_dotenv
