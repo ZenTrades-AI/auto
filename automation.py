@@ -21,8 +21,12 @@ def run_browser(data):
                 headless=True,
                 args=["--no-sandbox", "--disable-dev-shm-usage"]
             )
-            # Add explicit viewport size to prevent mobile-layout/colliding elements in headless
-            page = browser.new_page(viewport={"width": 1920, "height": 1080})
+            # Add a spoofed User-Agent so Google doesn't instantly block the popup request due to Linux Headless detection
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                viewport={"width": 1920, "height": 1080}
+            )
+            page = context.new_page()
 
             # =====================================
             # 🌐 OPEN LOGIN PAGE
@@ -34,12 +38,13 @@ def run_browser(data):
             # 🔐 GOOGLE LOGIN (POPUP HANDLING)
             # =====================================
             print("🔐 Clicking Google login...")
+            
+            # Google's Javascript dynamically rebuilds this button. Wait 5 seconds for it to stabilize!
+            page.wait_for_timeout(5000)
 
             with page.expect_popup() as popup_info:
-                # Target the Google login button directly using robust locators and forcefully bypassing dynamic animation checks
-                google_btn = page.locator("div.nsm7Bb-HzV7m-LgbsSe-MJoBVe").first
-                google_btn.wait_for(state="visible", timeout=15000)
-                google_btn.click(force=True)
+                # Click it exactly how a human would, without force
+                page.locator("div.nsm7Bb-HzV7m-LgbsSe-MJoBVe").first.click()
 
             popup = popup_info.value
             popup.wait_for_load_state()
