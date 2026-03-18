@@ -74,6 +74,7 @@ HTML_TEMPLATE = """
     <script>
         document.getElementById('triggerForm').addEventListener('submit', function(e) {
             e.preventDefault();
+            console.log("🟢 Submit button clicked!");
             
             const btn = document.querySelector('button');
             btn.disabled = true;
@@ -86,11 +87,15 @@ HTML_TEMPLATE = """
                 customer_id: document.getElementById('customer_id').value
             };
             
+            console.log("📦 Form data gathered:", data);
+            console.log("🚀 Sending POST request to backend...");
+            
             fetch('/run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             }).then(response => {
+                console.log("📥 Received response from server:", response);
                 if(response.ok) {
                     const msg = document.getElementById('statusMessage');
                     msg.style.display = 'block';
