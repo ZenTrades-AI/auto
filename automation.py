@@ -1,5 +1,8 @@
-from playwright.sync_api import sync_playwright
 import os
+# Force Playwright to look for the Chromium binary inside the project folder instead of the purged OS cache!
+os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
+
+from playwright.sync_api import sync_playwright
 from dotenv import load_dotenv
 
 load_dotenv()
