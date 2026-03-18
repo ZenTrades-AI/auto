@@ -4,6 +4,9 @@ from flask import Flask, request, render_template_string, jsonify
 import logging
 import threading
 
+import sys
+sys.stdout.reconfigure(line_buffering=True)
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -12,6 +15,13 @@ load_dotenv()
 # We call it both app and flask_app so Gunicorn won't break
 app = Flask(__name__)
 flask_app = app
+
+if "gunicorn" in os.environ.get("SERVER_SOFTWARE", ""):
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
+    logger.handlers = gunicorn_logger.handlers
+    logger.setLevel(gunicorn_logger.level)
 
 # Simple HTML Form template
 HTML_TEMPLATE = """
@@ -111,6 +121,7 @@ def home():
 def run_automation():
     data = request.json
     logger.info(f"📩 Received UI manual trigger with data: {data}")
+    print(f"📩 PRINT: Received UI trigger: {data}", flush=True)
     
     # Import inside function to prevent Playwright global thread deadlock in Gunicorn!
     from automation import run_browser
