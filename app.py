@@ -131,8 +131,8 @@ def run_automation():
     # Import inside function to prevent Playwright global thread deadlock in Gunicorn!
     from automation import run_browser
     
-    # Run browser in a separate thread so it doesn't block the UI response
-    thread = threading.Thread(target=run_browser, args=(data,))
+    # Run browser in a separate daemon thread so Gunicorn closes the HTTP response IMMEDIATELY
+    thread = threading.Thread(target=run_browser, args=(data,), daemon=True)
     thread.start()
     
     return jsonify({"status": "Automation started in background"}), 200
