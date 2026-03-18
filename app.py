@@ -1,30 +1,25 @@
 import os
 import re
-import logging
 from dotenv import load_dotenv
 
 from slack_bolt import App
 from slack_bolt.adapter.flask import SlackRequestHandler
 from flask import Flask, request, jsonify
-
-from automation import run_browser
-
-# ==============================
-# 🔧 Setup
-# ==============================
-load_dotenv()
+import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Slack Bolt App
+from automation import run_browser
+
+load_dotenv()
+
 bolt_app = App(
     token=os.getenv("SLACK_BOT_TOKEN"),
     signing_secret=os.getenv("SLACK_SIGNING_SECRET")
 )
 
-# Flask App (THIS is what Gunicorn will run)
-flask_app = Flask(__name__)
+app = Flask(__name__)
 handler = SlackRequestHandler(bolt_app)
 
 
@@ -33,33 +28,29 @@ handler = SlackRequestHandler(bolt_app)
 # ==============================
 @flask_app.route("/", methods=["GET"])
 def home():
-    return "✅ Server is running", 200
+    return render_template_string(HTML_TEMPLATE)
 
-
-@flask_app.route("/slack/events", methods=["POST"])
+@app.route("/slack/events", methods=["POST"])
 def slack_events():
-    print("🔥🔥🔥 SLACK HIT RECEIVED 🔥🔥🔥")
-
+    logger.info("📩 Received POST request at /slack/events")
+    logger.info(f"HEADERS: {request.headers}")
     data = request.json
-    print("📩 RAW BODY:", data)
+    logger.info(f"BODY: {data}")
 
-    # Slack verification
+    # ✅ Handle Slack URL verification
     if data and data.get("type") == "url_verification":
-        print("✅ URL VERIFICATION")
         return jsonify({"challenge": data["challenge"]})
 
     try:
         response = handler.handle(request)
-        print("✅ HANDLER CALLED")
+        logger.info(f"✅ Handler executed successfully. Response info: {response}")
         return response
     except Exception as e:
-        print("❌ ERROR:", str(e))
-        return "error", 500
+        logger.error(f"❌ Error handling Slack event: {str(e)}")
+        return "Internal Server Error", 500
 
 
-# ==============================
-# 🧠 Parser
-# ==============================
+# ✅ FINAL ROBUST PARSER
 def parse_message(text):
     text = text.replace("•", "")
     text = text.strip()
@@ -90,9 +81,6 @@ def parse_message(text):
     return data
 
 
-# ==============================
-# ⚡ Slack Event Handler
-# ==============================
 @bolt_app.event("message")
 def handle_message_events(body, logger):
     print("\n🔥 EVENT RECEIVED 🔥")
@@ -106,7 +94,7 @@ def handle_message_events(body, logger):
 
     text = event.get("text", "")
 
-    # fallback if Slack sends blocks
+    # fallback for Slack block messages
     if not text and "blocks" in event:
         text = str(event["blocks"])
 
@@ -121,5 +109,5 @@ def handle_message_events(body, logger):
 # 🚀 Local run (not used in Render)
 # ==============================
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    flask_app.run(host="0.0.0.0", port=port)
+    port = int(os.environ.get("PORT", 3000))
+    app.run(host="0.0.0.0", port=port)

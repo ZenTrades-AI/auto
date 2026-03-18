@@ -12,7 +12,8 @@ def run_browser(data):
         with sync_playwright() as p:
             # ✅ HEADLESS MODE (for server)
             browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
+            # Add explicit viewport size to prevent mobile-layout/colliding elements in headless
+            page = browser.new_page(viewport={"width": 1920, "height": 1080})
 
             # =====================================
             # 🌐 OPEN LOGIN PAGE
@@ -77,6 +78,13 @@ def run_browser(data):
             page.locator('li[role="option"]:has-text("Customer")').click()
 
             print("✅ Module selected")
+            # Explicitly wait for the Material UI dropdown popover to close gracefully
+            try:
+                page.locator('.MuiPopover-root').wait_for(state="hidden", timeout=5000)
+            except:
+                pass
+
+            page.wait_for_timeout(3000)
 
             # =====================================
             # 🔍 SEARCH CUSTOMER
@@ -86,13 +94,15 @@ def run_browser(data):
             customer_id = data.get("customer_id", "")
             print("📦 RAW CUSTOMER ID:", customer_id)
 
-            search_input = page.locator('input[placeholder="Search Customer.."]')
+            # Use .first in case there are multiple Mui input variants hidden in the DOM
+            search_input = page.locator('input[placeholder="Search Customer.."]').first
+            
+            search_input.wait_for(state="visible", timeout=15000)
 
-            search_input.click()
-            search_input.fill("")
-            search_input.type(customer_id, delay=50)
-
-            page.keyboard.press("Enter")
+            # Use force=True to bypass any sneaky hidden DOM layers
+            search_input.click(force=True)
+            search_input.fill(customer_id, force=True)
+            search_input.press("Enter")
 
             print("✅ Searching:", customer_id)
 
