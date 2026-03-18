@@ -43,8 +43,10 @@ def run_browser(data):
             page.wait_for_timeout(5000)
 
             with page.expect_popup() as popup_info:
-                # Locate the main parent class wrapper, then dispatch a completely native Javascript click event within Chrome itself!
-                page.locator(".nsm7Bb-HzV7m-LgbsSe").first.evaluate("button => button.click()")
+                # CRITICAL: Google ALWAYS hides their SSO login buttons inside a cross-domain iframe!
+                # We MUST tell Playwright to tunnel into the iframe first, otherwise the element is permanently invisible to page locators!
+                google_frame = page.frame_locator('iframe[title*="Sign in with Google"]').first
+                google_frame.locator("#container-div").first.click()
 
             popup = popup_info.value
             popup.wait_for_load_state()
