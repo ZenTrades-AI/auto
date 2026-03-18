@@ -1,11 +1,8 @@
 import os
-import re
 from dotenv import load_dotenv
-
-from slack_bolt import App
-from slack_bolt.adapter.flask import SlackRequestHandler
-from flask import Flask, request, jsonify
+from flask import Flask, request, render_template_string, jsonify
 import logging
+import threading
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -14,100 +11,115 @@ from automation import run_browser
 
 load_dotenv()
 
-bolt_app = App(
-    token=os.getenv("SLACK_BOT_TOKEN"),
-    signing_secret=os.getenv("SLACK_SIGNING_SECRET")
-)
-
+# We call it both app and flask_app so Gunicorn won't break
 app = Flask(__name__)
-handler = SlackRequestHandler(bolt_app)
+flask_app = app
 
+# Simple HTML Form template
+HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Data Extension</title>
+    <style>
+        body { font-family: 'Inter', Arial, sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: #fff; padding: 25px 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
+        h2 { text-align: center; color: #333; margin-top: 0; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #555; font-weight: bold; }
+        input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; transition: border-color 0.3s; }
+        input[type="text"]:focus { border-color: #0056b3; outline: none; }
+        button { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background-color 0.3s; }
+        button:hover { background-color: #0056b3; }
+        .message { margin-top: 15px; text-align: center; color: green; font-weight: bold; display: none; }
+        .error-message { color: red; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Delete Customer</h2>
+        <form id="triggerForm">
+            <div class="form-group">
+                <label for="name">Name</label>
+                <input type="text" id="name" name="name" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="phone">Phone</label>
+                <input type="text" id="phone" name="phone" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="address">Address</label>
+                <input type="text" id="address" name="address" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="customer_id">Customer ID (Required)</label>
+                <input type="text" id="customer_id" name="customer_id" required placeholder="Enter the Customer ID...">
+            </div>
+            <button type="submit">Run Browser Automation</button>
+        </form>
+        <div id="statusMessage" class="message">Automation triggered in background!</div>
+        <div id="errorMessage" class="message error-message">An error occurred!</div>
+    </div>
+    
+    <script>
+        document.getElementById('triggerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const btn = document.querySelector('button');
+            btn.disabled = true;
+            btn.innerText = 'Triggering...';
+            
+            const data = {
+                name: document.getElementById('name').value,
+                phone: document.getElementById('phone').value,
+                address: document.getElementById('address').value,
+                customer_id: document.getElementById('customer_id').value
+            };
+            
+            fetch('/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).then(response => {
+                if(response.ok) {
+                    const msg = document.getElementById('statusMessage');
+                    msg.style.display = 'block';
+                    setTimeout(() => { msg.style.display = 'none'; }, 5000);
+                    document.getElementById('triggerForm').reset();
+                } else {
+                    throw new Error('Server returned an error');
+                }
+            }).catch(error => {
+                const msg = document.getElementById('errorMessage');
+                msg.style.display = 'block';
+                setTimeout(() => { msg.style.display = 'none'; }, 5000);
+            }).finally(() => {
+                btn.disabled = false;
+                btn.innerText = 'Run Browser Automation';
+            });
+        });
+    </script>
+</body>
+</html>
+"""
 
-# ==============================
-# 🌐 Routes
-# ==============================
-@flask_app.route("/", methods=["GET"])
+@app.route("/", methods=["GET"])
 def home():
     return render_template_string(HTML_TEMPLATE)
 
-@app.route("/slack/events", methods=["POST"])
-def slack_events():
-    logger.info("📩 Received POST request at /slack/events")
-    logger.info(f"HEADERS: {request.headers}")
+@app.route("/run", methods=["POST"])
+def run_automation():
     data = request.json
-    logger.info(f"BODY: {data}")
+    logger.info(f"📩 Received UI manual trigger with data: {data}")
+    
+    # Run browser in a separate thread so it doesn't block the UI response
+    thread = threading.Thread(target=run_browser, args=(data,))
+    thread.start()
+    
+    return jsonify({"status": "Automation started in background"}), 200
 
-    # ✅ Handle Slack URL verification
-    if data and data.get("type") == "url_verification":
-        return jsonify({"challenge": data["challenge"]})
-
-    try:
-        response = handler.handle(request)
-        logger.info(f"✅ Handler executed successfully. Response info: {response}")
-        return response
-    except Exception as e:
-        logger.error(f"❌ Error handling Slack event: {str(e)}")
-        return "Internal Server Error", 500
-
-
-# ✅ FINAL ROBUST PARSER
-def parse_message(text):
-    text = text.replace("•", "")
-    text = text.strip()
-
-    print("📩 RAW TEXT:\n", text)
-
-    data = {}
-
-    name = re.search(r"Name:\s*(.+)", text)
-    phone = re.search(r"Phone:\s*(.+)", text)
-    address = re.search(r"Address:\s*(.+)", text)
-    customer_id = re.search(r"Customer ID:\s*(.+)", text)
-
-    if name:
-        data["name"] = name.group(1).strip()
-
-    if phone:
-        data["phone"] = phone.group(1).strip()
-
-    if address:
-        data["address"] = address.group(1).strip()
-
-    if customer_id:
-        data["customer_id"] = customer_id.group(1).strip()
-
-    print("📦 PARSED DATA:", data)
-
-    return data
-
-
-@bolt_app.event("message")
-def handle_message_events(body, logger):
-    print("\n🔥 EVENT RECEIVED 🔥")
-    print(body)
-    print("====================================\n")
-
-    event = body.get("event", {})
-
-    if "bot_id" in event:
-        return
-
-    text = event.get("text", "")
-
-    # fallback for Slack block messages
-    if not text and "blocks" in event:
-        text = str(event["blocks"])
-
-    parsed = parse_message(text)
-
-    print("🚀 Calling browser automation...")
-
-    run_browser(parsed)
-
-
-# ==============================
-# 🚀 Local run (not used in Render)
-# ==============================
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 3000))
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
