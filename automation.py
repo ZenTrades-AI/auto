@@ -36,7 +36,10 @@ def run_browser(data):
             print("🔐 Clicking Google login...")
 
             with page.expect_popup() as popup_info:
-                page.click("div.nsm7Bb-HzV7m-LgbsSe-MJoBVe")
+                # Target the Google login button directly using robust locators and forcefully bypassing dynamic animation checks
+                google_btn = page.locator("div.nsm7Bb-HzV7m-LgbsSe-MJoBVe").first
+                google_btn.wait_for(state="visible", timeout=15000)
+                google_btn.click(force=True)
 
             popup = popup_info.value
             popup.wait_for_load_state()
