@@ -43,8 +43,8 @@ def run_browser(data):
             page.wait_for_timeout(5000)
 
             with page.expect_popup() as popup_info:
-                # Click it exactly how a human would, without force
-                page.locator("div.nsm7Bb-HzV7m-LgbsSe-MJoBVe").first.click()
+                # Click the entire parent button wrapper explicitly using the text to perfectly ensure we actually hit the real event listener layer
+                page.locator('div[role="button"]:has-text("Sign in with Google")').first.click()
 
             popup = popup_info.value
             popup.wait_for_load_state()
