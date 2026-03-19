@@ -9,9 +9,8 @@ load_dotenv()
 def run_browser(data):
     print("🔥 run_browser STARTED", flush=True)
 
-    # DYNAMIC FETCH: Completely mitigates Render deleting binaries between Build/Run phases.
-    print("🛠 Ensuring Chromium is natively installed on the live runner...", flush=True)
-    os.system("playwright install chromium")
+    # Chromium is now guaranteed to be available locally in /opt/render/project/src/.playwright
+    # due to the new build.sh and app.py path overrides. No need to download dynamically!
 
     try:
         with sync_playwright() as p:
@@ -41,6 +40,7 @@ def run_browser(data):
             
             # Google's Javascript dynamically rebuilds this button. Wait 5 seconds for it to stabilize!
             page.wait_for_timeout(5000)
+            playe
 
             with page.expect_popup() as popup_info:
                 # CRITICAL: Google ALWAYS hides their SSO login buttons inside a cross-domain iframe!

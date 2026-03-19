@@ -1,4 +1,9 @@
 import os
+
+# CRITICAL: Tell Playwright it must look for the browsers inside our local project directory, 
+# because Render deletes the default ~/.cache folder where they normally live!
+os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/opt/render/project/src/.playwright"
+
 import queue
 from dotenv import load_dotenv
 from flask import Flask, request, render_template_string, jsonify
