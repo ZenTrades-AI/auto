@@ -18,7 +18,7 @@ def run_browser(data):
             # ✅ HEADLESS MODE (for server)
             # CRITICAL: Added args for Render's constrained architecture
             browser = p.chromium.launch(
-                headless=True,
+                headless=False,
                 args=["--no-sandbox", "--disable-dev-shm-usage"]
             )
             # Add a spoofed User-Agent so Google doesn't instantly block the popup request due to Linux Headless detection
@@ -78,7 +78,7 @@ def run_browser(data):
 
             company_input = page.locator("#combo-box-demo")
             company_input.click()
-            company_input.fill("E.A.S. Fire Services")
+            company_input.fill("Freedom Fire & Security (523)")
 
             page.wait_for_timeout(2000)
             page.keyboard.press("ArrowDown")
@@ -127,27 +127,51 @@ def run_browser(data):
 
             # Wait for delete button
             page.wait_for_selector('button:has-text("Delete")', timeout=15000)
+            page.wait_for_timeout(2000)  # Wait for React to render multiple rows if any
 
             # =====================================
             # 🗑 DELETE
             # =====================================
-            print("🗑 Clicking delete...")
+            customer_name = data.get("name", "").strip()
+            deleted_any = False
 
-            page.locator('button:has-text("Delete")').first.click()
+            if customer_name:
+                print(f"🕵️ Name provided. Filtering results for: '{customer_name}'")
+                
+                # Find rows/containers that have the name AND a Delete button
+                row_locator = page.locator('tr, [role="row"], .MuiGrid-container, .MuiTableRow-root').filter(has_text=customer_name).filter(has=page.locator('button:has-text("Delete")'))
+                
+                match_count = row_locator.count()
+                if match_count > 0:
+                    print(f"🎯 Found {match_count} result(s) matching exactly Name: '{customer_name}'. Deleting all...")
+                    
+                    for i in range(match_count):
+                        # Re-evaluate the locator because DOM changes after a delete!
+                        row = page.locator('tr, [role="row"], .MuiGrid-container, .MuiTableRow-root').filter(has_text=customer_name).filter(has=page.locator('button:has-text("Delete")')).first
+                        
+                        print(f"🗑 Clicking delete {i+1} of {match_count}...")
+                        row.locator('button:has-text("Delete")').first.click()
+                        
+                        confirm_btn = page.locator('button:has-text("Confirm"), button:has-text("Yes")').first
+                        confirm_btn.wait_for(state="visible", timeout=5000)
+                        confirm_btn.click()
+                        
+                        page.wait_for_timeout(3000)  # Wait for API and UI update
+                        
+                    deleted_any = True
+                else:
+                    print(f"⚠️ No results contained the name '{customer_name}'. Falling back to first available match.")
 
-            # =====================================
-            # ✅ CONFIRM
-            # =====================================
-            print("✅ Confirming delete...")
+            if not deleted_any:
+                print("🗑 Clicking first available delete button...")
+                page.locator('button:has-text("Delete")').first.click()
 
-            confirm_btn = page.locator(
-                'button:has-text("Confirm"), button:has-text("Yes")'
-            ).first
-
-            confirm_btn.wait_for(state="visible", timeout=5000)
-            confirm_btn.click()
-
-            page.wait_for_timeout(5000)
+                print("✅ Confirming delete...")
+                confirm_btn = page.locator('button:has-text("Confirm"), button:has-text("Yes")').first
+                confirm_btn.wait_for(state="visible", timeout=5000)
+                confirm_btn.click()
+                
+                page.wait_for_timeout(5000)
 
             print("🎉 CUSTOMER DELETED SUCCESSFULLY")
 
