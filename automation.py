@@ -9,8 +9,13 @@ load_dotenv()
 def run_browser(data):
     print("🔥 run_browser STARTED", flush=True)
 
-    # Chromium is now guaranteed to be available locally in /opt/render/project/src/.playwright
+    # Chromium is now guaranteed to be available locally in /opt/render/project/src/pw-browsers
     # due to the new build.sh and app.py path overrides. No need to download dynamically!
+    
+    # 🚨 FOOLPROOF FALLBACK: If Render somehow entirely skipped build.sh or aggressively deleted the folder:
+    if not os.path.exists("/opt/render/project/src/pw-browsers") or len(os.listdir("/opt/render/project/src/pw-browsers")) == 0:
+        print("⚠️ PLAYWRIGHT FOLDER MISSING! Render must have skipped the build script or wiped the folder. Forcefully downloading now!", flush=True)
+        os.system("playwright install chromium")
 
     try:
         with sync_playwright() as p:
@@ -90,6 +95,7 @@ def run_browser(data):
             # 📂 SELECT MODULE
             # =====================================
             print("📂 Selecting module...")
+            
 
             page.locator('label:has-text("Modules")').locator('..').locator('div[role="button"]').click()
             page.wait_for_selector('li[role="option"]')

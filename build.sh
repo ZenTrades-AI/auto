@@ -3,7 +3,7 @@
 set -o errexit
 
 # CRITICAL: Force playwright to install INSIDE the project directory so Render doesn't delete it after the build phase!
-export PLAYWRIGHT_BROWSERS_PATH="/opt/render/project/src/.playwright"
+export PLAYWRIGHT_BROWSERS_PATH="/opt/render/project/src/pw-browsers"
 
 pip install -r requirements.txt
 playwright install chromium
