@@ -52,11 +52,18 @@ def background_worker():
             logger.info("✅ Task completed. Waiting for the next one in queue...")
 
 # ==========================================
-# 2. Start the Worker Thread
+# 2. Worker Thread Management
 # ==========================================
-# We only want to start the thread once. 
-worker_thread = threading.Thread(target=background_worker, daemon=True)
-worker_thread.start()
+worker_thread = None
+worker_lock = threading.Lock()
+
+def start_worker_if_needed():
+    global worker_thread
+    with worker_lock:
+        if worker_thread is None or not worker_thread.is_alive():
+            worker_thread = threading.Thread(target=background_worker, daemon=True)
+            worker_thread.start()
+            logger.info("🧵 Background worker thread started inside worker context.")
 
 # Simple HTML Form template
 HTML_TEMPLATE = """
@@ -163,6 +170,9 @@ def run_automation():
     logger.info(f"📩 Received UI manual trigger with data: {data}")
     print(f"📩 PRINT: Received UI trigger: {data}", flush=True)
     
+    # Ensure the background thread is running in this specific Gunicorn worker process
+    start_worker_if_needed()
+
     # ==========================================
     # 3. Add the request to the Queue instead of starting a new thread
     # ==========================================
