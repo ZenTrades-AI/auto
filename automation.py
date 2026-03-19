@@ -78,7 +78,7 @@ def run_browser(data):
 
             company_input = page.locator("#combo-box-demo")
             company_input.click()
-            company_input.fill("Freedom Fire & Security (523)")
+            company_input.fill("E.A.S. Fire Services")
 
             page.wait_for_timeout(2000)
             page.keyboard.press("ArrowDown")
