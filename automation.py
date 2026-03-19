@@ -45,8 +45,6 @@ def run_browser(data):
             
             # Google's Javascript dynamically rebuilds this button. Wait 5 seconds for it to stabilize!
             page.wait_for_timeout(5000)
-            playe
-
             with page.expect_popup() as popup_info:
                 # CRITICAL: Google ALWAYS hides their SSO login buttons inside a cross-domain iframe!
                 # We MUST tell Playwright to tunnel into the iframe first, otherwise the element is permanently invisible to page locators!
