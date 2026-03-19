@@ -1,4 +1,5 @@
 import os
+import queue
 from dotenv import load_dotenv
 from flask import Flask, request, render_template_string, jsonify
 import logging
@@ -22,6 +23,40 @@ if "gunicorn" in os.environ.get("SERVER_SOFTWARE", ""):
     app.logger.setLevel(gunicorn_logger.level)
     logger.handlers = gunicorn_logger.handlers
     logger.setLevel(gunicorn_logger.level)
+
+# ==========================================
+# 1. Create a Global Queue for Requests
+# ==========================================
+task_queue = queue.Queue()
+
+def background_worker():
+    """
+    This function runs continuously in the background.
+    It waits for a task to be added to the queue, processes it, and then waits for the next.
+    """
+    from automation import run_browser
+    
+    while True:
+        # This will block and wait until a new item is added to the queue
+        data = task_queue.get()
+        logger.info(f"⚙️ Starting queued automation task for: {data}")
+        
+        try:
+            # Run the automation synchronously (one at a time)
+            run_browser(data)
+        except Exception as e:
+            logger.error(f"❌ Error during background task: {e}")
+        finally:
+            # Mark the task as done so the queue knows it can move on
+            task_queue.task_done()
+            logger.info("✅ Task completed. Waiting for the next one in queue...")
+
+# ==========================================
+# 2. Start the Worker Thread
+# ==========================================
+# We only want to start the thread once. 
+worker_thread = threading.Thread(target=background_worker, daemon=True)
+worker_thread.start()
 
 # Simple HTML Form template
 HTML_TEMPLATE = """
@@ -67,7 +102,7 @@ HTML_TEMPLATE = """
             </div>
             <button type="submit">Run Browser Automation</button>
         </form>
-        <div id="statusMessage" class="message">Automation triggered in background!</div>
+        <div id="statusMessage" class="message">Task added to queue!</div>
         <div id="errorMessage" class="message error-message">An error occurred!</div>
     </div>
     
@@ -128,14 +163,18 @@ def run_automation():
     logger.info(f"📩 Received UI manual trigger with data: {data}")
     print(f"📩 PRINT: Received UI trigger: {data}", flush=True)
     
-    # Import inside function to prevent Playwright global thread deadlock in Gunicorn!
-    from automation import run_browser
+    # ==========================================
+    # 3. Add the request to the Queue instead of starting a new thread
+    # ==========================================
+    task_queue.put(data)
     
-    # Run browser in a separate daemon thread so Gunicorn closes the HTTP response IMMEDIATELY
-    thread = threading.Thread(target=run_browser, args=(data,), daemon=True)
-    thread.start()
+    # We can also let the user know their position in the queue
+    queue_size = task_queue.qsize()
     
-    return jsonify({"status": "Automation started in background"}), 200
+    return jsonify({
+        "status": "Task added to queue", 
+        "queue_position": queue_size 
+    }), 200
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
