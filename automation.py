@@ -13,7 +13,9 @@ def run_browser(data):
     # due to the new build.sh and app.py path overrides. No need to download dynamically!
     
     # 🚨 FOOLPROOF FALLBACK: If Render somehow entirely skipped build.sh or aggressively deleted the folder:
-    if not os.path.exists("/opt/render/project/src/pw-browsers") or len(os.listdir("/opt/render/project/src/pw-browsers")) == 0:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    pw_dir = os.path.join(BASE_DIR, "pw-browsers")
+    if not os.path.exists(pw_dir) or len(os.listdir(pw_dir)) == 0:
         print("⚠️ PLAYWRIGHT FOLDER MISSING! Render must have skipped the build script or wiped the folder. Forcefully downloading now!", flush=True)
         os.system("playwright install chromium")
 

@@ -2,7 +2,8 @@ import os
 
 # CRITICAL: Tell Playwright it must look for the browsers inside our local project directory, 
 # because Render deletes the default ~/.cache folder where they normally live!
-os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/opt/render/project/src/pw-browsers"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+os.environ["PLAYWRIGHT_BROWSERS_PATH"] = os.path.join(BASE_DIR, "pw-browsers")
 
 import queue
 from dotenv import load_dotenv
