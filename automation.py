@@ -24,7 +24,7 @@ def run_browser(data):
             # ✅ HEADLESS MODE (for server)
             # CRITICAL: Added args for Render's constrained architecture
             browser = p.chromium.launch(
-                headless=True,
+                headless=False,
                 args=["--no-sandbox", "--disable-dev-shm-usage"]
             )
             # Add a spoofed User-Agent so Google doesn't instantly block the popup request due to Linux Headless detection
@@ -61,9 +61,10 @@ def run_browser(data):
 
             popup.wait_for_timeout(3000)
 
-            # Google often has a hidden password input that traps the automation.
-            # We filter specifically for the input that is currently visible.
-            password_input = popup.locator('input[type="password"]:visible').first
+            # The Google Login password field is explicitly named "Passwd".
+            # This completely avoids the background hidden honey-pot without needing :visible
+            password_input = popup.locator('input[name="Passwd"]')
+            password_input.wait_for(state="visible", timeout=15000)
             password_input.fill(os.getenv("PASSWORD"))
             popup.click('button:has-text("Next")')
 
