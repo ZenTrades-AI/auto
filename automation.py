@@ -61,7 +61,10 @@ def run_browser(data):
 
             popup.wait_for_timeout(3000)
 
-            popup.fill('input[type="password"]', os.getenv("PASSWORD"))
+            # Google often has a hidden password input that traps the automation.
+            # We filter specifically for the input that is currently visible.
+            password_input = popup.locator('input[type="password"]:visible').first
+            password_input.fill(os.getenv("PASSWORD"))
             popup.click('button:has-text("Next")')
 
             print("⏳ Waiting for login...")
