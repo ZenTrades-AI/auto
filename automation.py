@@ -24,7 +24,7 @@ def run_browser(data):
             # ✅ HEADLESS MODE (for server)
             # CRITICAL: Added args for Render's constrained architecture
             browser = p.chromium.launch(
-                headless=False,
+                headless=True,
                 args=["--no-sandbox", "--disable-dev-shm-usage"]
             )
             # Add a spoofed User-Agent so Google doesn't instantly block the popup request due to Linux Headless detection
