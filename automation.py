@@ -47,28 +47,41 @@ def run_browser(data):
             
             # Google's Javascript dynamically rebuilds this button. Wait 5 seconds for it to stabilize!
             page.wait_for_timeout(5000)
+            print("🔍 Locating Google SSO iframe...")
             with page.expect_popup() as popup_info:
                 # CRITICAL: Google ALWAYS hides their SSO login buttons inside a cross-domain iframe!
                 # We MUST tell Playwright to tunnel into the iframe first, otherwise the element is permanently invisible to page locators!
                 google_frame = page.frame_locator('iframe[title*="Sign in with Google"]').first
+                print("🎯 Clicking inside the Google iframe...")
                 google_frame.locator("#container-div").first.click()
 
+            print("🪟 Intercepted popup, waiting for it to load...")
             popup = popup_info.value
             popup.wait_for_load_state()
 
+            print("✉️ Filling email...")
             popup.fill('input[type="email"]', os.getenv("EMAIL"))
+            print("🖱️ Clicking Next...")
             popup.click('button:has-text("Next")')
 
+            print("⏳ Waiting 3 seconds for Google to process email...")
             popup.wait_for_timeout(3000)
 
+            print("🔑 Attempting to locate password field...")
             # The Google Login password field is explicitly named "Passwd".
             # This completely avoids the background hidden honey-pot without needing :visible
             password_input = popup.locator('input[name="Passwd"]')
+            
+            print("⏳ Waiting for password field to be visible on screen...")
             password_input.wait_for(state="visible", timeout=15000)
+            
+            print("⌨️ Filling password...")
             password_input.fill(os.getenv("PASSWORD"))
+            
+            print("🖱️ Clicking Next on password screen...")
             popup.click('button:has-text("Next")')
 
-            print("⏳ Waiting for login...")
+            print("⏳ Waiting for login to route back...")
             popup.wait_for_event("close")
 
             page.wait_for_timeout(5000)
